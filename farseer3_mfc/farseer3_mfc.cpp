@@ -36,6 +36,14 @@ Cfarseer3mfcDlg * dlgRef;
 //operational controls
 glm::vec2 p1(0.0f);
 glm::vec2 p2(0.0f);
+
+//automeasure controls
+glm::vec2 tp1(0.0f), tp2(0.0f), tp3(0.0f), tp4(0.0f);
+float amTol = 0.6f;
+int amBS = 20;
+
+vector<glm::vec2> measMarkers;
+
 int opId = 0; //0 - nothing
 			  //1 - scale x
 			  //2 - scale y
@@ -143,10 +151,125 @@ float getDist(glm::vec2 pt1, glm::vec2 pt2)
 	return sqrt(pow(pt1.x - pt2.x, 2) + pow(pt1.y - pt2.y, 2));
 }
 
+
+float cbDelta(vector<glm::vec3> colourBuff)
+{
+	int n = 0;
+	float delta = 0.0f;
+	if (colourBuff.size() > 1)
+	{
+		float ccmn = 0.0f;
+		float ccmx = 0.0f;
+		for (glm::vec3 cc : colourBuff)
+		{			
+			float ccol = (cc.r + cc.g + cc.b) / 3.0f;
+			if (n == 0) { ccmn = ccol; ccmx = ccol; }
+			if (ccmn > ccol) ccmn = ccol;
+			if (ccmx < ccol) ccmx = ccol;
+			n++;
+		}
+		delta = abs(ccmx - ccmn);
+		return delta;
+	}
+	else
+		return 0.0f;
+}
+
+
+
+void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, float tolerance, int crawlerBuffer)
+{
+	//get view direction from point 1 to point 2
+	glm::vec2 axDir = glm::normalize(pt2 - pt1);
+
+	//get view direction for crawler
+	glm::vec2 crDir = glm::normalize(pt4 - pt3);
+
+	//get expected crawler path lengths
+	float axLen = glm::length(pt2 - pt1);
+	float crLen = glm::length(pt4 - pt3);
+
+	//position crawler at starting point
+	glm::vec2 crStart = pt3;
+	glm::vec2 cCrStart = pt3;
+	glm::vec2 crPos = pt3;
+
+	vector<glm::vec3> colourBuff = {}; //colour buffer for crawler
+	vector<glm::vec2> deltaSet =   {}; //set of found deltas
+
+	//all variables are now set, launch crawler
+	float cCrPath = glm::length(cCrStart - crStart);
+	float cLinePath = glm::length(cCrStart - crPos);
+	
+	flarr sizeSet = {};
+
+	while (cCrPath < axLen)
+	{
+		cCrPath = glm::length(cCrStart - crStart);
+		cLinePath = glm::length(cCrStart - crPos);
+		deltaSet.clear();
+		colourBuff.clear();
+		cCrPath = glm::length(cCrStart - crStart);
+		while (cLinePath < crLen)
+		{
+			cLinePath = glm::length(cCrStart - crPos);
+			glm::vec3 cClr = getDataPixels(tex_data, texCh, crPos.x, texH - crPos.y, texW, texH);
+			colourBuff.push_back(cClr);
+			//remove first element if the buffer is full
+			if (colourBuff.size() > crawlerBuffer) colourBuff.erase(colourBuff.begin());
+			float cDelta = cbDelta(colourBuff);
+			if (cDelta > tolerance) deltaSet.push_back(crPos-crDir*glm::vec2((float)(colourBuff.size())/2.0f));
+			crPos += crDir;
+		}
+		if (deltaSet.size() == 0)
+		{
+			deltaSet.push_back(cCrStart);
+			deltaSet.push_back(crPos);
+		}
+		if (deltaSet.size() == 1)
+		{
+			deltaSet.push_back(crPos);
+		}
+
+		glm::vec2 mpt1 = deltaSet[0];
+		glm::vec2 mpt2 = deltaSet[deltaSet.size()-1];
+
+		measMarkers.push_back(mpt1);
+		measMarkers.push_back(mpt2);
+
+		float dx = abs(mpt1.x - mpt2.x) * scaleX;
+		float dy = abs(mpt1.y - mpt2.y) * scaleY;
+		float measurement = sqrt(pow(dx, 2) + pow(dy, 2));
+		sizeSet.push_back(measurement);
+
+		cCrStart += axDir;
+		crPos = cCrStart;
+	}
+
+	float sum = 0.0f;
+	for (float cs : sizeSet)
+	{
+		sum += cs;
+	}
+	
+	lastMeasurement = sum / (float)(sizeSet.size());
+
+	measJournal.push_back(lastMeasurement);
+	dlgRef->outpMeasJourn();
+
+	CString outp;
+	outp.Format(_T("Auto measured Value = %f"), lastMeasurement);
+
+	if (dlgRef->vCbShowMessage.GetCheck())
+		AfxMessageBox(outp, MB_OK | MB_ICONINFORMATION);
+
+}
+
 //select which manipulations to perform depending on
 //current operation and stage of procedure
 void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx, float cy)
 {
+
 	//get scale x
 	if (op == 1)
 	{
@@ -209,6 +332,8 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 		{
 			pt2.x = cx;
 			pt2.y = cy;
+			measMarkers.push_back(pt1);
+			measMarkers.push_back(pt2);
 			stage = 0;
 			op = 0;
 			theApp.demandOp = 0;
@@ -225,9 +350,9 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 			AfxMessageBox(outp,	MB_OK | MB_ICONINFORMATION);
 
 			myIl.doDraw = false;
-			theApp.fScaleY = scaleY;
 		}
 	}
+
 
 	//dropper
 	if (op == 4)
@@ -249,6 +374,46 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 		}
 	}
 
+	//automeasure
+	if (op == 5)
+	{
+		if (stage == 0)
+		{
+			tp1.x = cx;
+			tp1.y = cy;
+			stage++;
+			myIl.doDraw = true;
+			myIl.sp1 = tp1;
+		}
+		else if (stage == 1)
+		{
+			tp2.x = cx;
+			tp2.y = cy;
+			stage++;
+			myIl.doDraw = false;
+			myIl.sp1 = pt1;
+		}
+		else if (stage == 2)
+		{
+			tp3.x = cx;
+			tp3.y = cy;
+			stage++;
+			myIl.doDraw = true;
+			myIl.sp1 = tp3;
+		}
+		else if (stage == 3)
+		{
+			tp4.x = cx;
+			tp4.y = cy;
+			stage = 0;
+			op = 0;
+			theApp.demandOp = 0;
+
+			autoMeasure(tp1, tp2, tp3, tp4,amTol,amBS);
+
+			myIl.doDraw = false;
+		}
+	}
 
 }
 
@@ -396,6 +561,11 @@ void oglThreadFunc()
 				nomX = theApp.nomSizeX;
 				nomY = theApp.nomSizeY;
 			}
+			if (cOp == 5)
+			{
+				amTol = theApp.expTolerance;
+				amBS =  theApp.expBufSize;
+			}
 		}
 
 		//SetDlgItemText((HWND)IDC_STATIC1, 0, L"Hello");
@@ -425,6 +595,16 @@ void oglThreadFunc()
 		oMan.updateProjectionForShader(1);
 
 		drawPlaneOrigin(oMan.getShader(0), glm::vec3(0.0f), texW, texH, glm::vec3(1.0f,1.0f,1.0f), mTex, true);
+
+		for (glm::vec2 mp : measMarkers)
+		{
+			drawPlaneOrigin(oMan.getShader(1), glm::vec3(mp.x,mp.y,1.5f), 5.0f, 5.0f, glm::vec3(0.0f, 0.0f, 1.0f), 0, false);
+		}
+		while (measMarkers.size() > 200)
+		{
+			measMarkers.erase(measMarkers.begin());
+		}
+
 		if (myIl.doDraw)
 		{
 			glm::vec3 ilp1(myIl.sp1.x, myIl.sp1.y, 1.0f);

@@ -34,6 +34,8 @@ public:
 	int oglCurX, oglCurY;
 	CString file_target;
 	float nomSizeX, nomSizeY, fScaleX, fScaleY;
+	float expTolerance;
+	int expBufSize;
 		
 	int demandOp;
 

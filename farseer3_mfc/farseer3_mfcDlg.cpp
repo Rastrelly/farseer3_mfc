@@ -63,6 +63,8 @@ void Cfarseer3mfcDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, edScaleY, vEdScaleY);
 	DDX_Control(pDX, edJournal, vEdJournal);
 	DDX_Control(pDX, cbShowMessage, vCbShowMessage);
+	DDX_Control(pDX, edTolerance, vEdTolerance);
+	DDX_Control(pDX, edBuffSize, vEdBuffSize);
 }
 
 BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)
@@ -78,6 +80,7 @@ BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON5, &Cfarseer3mfcDlg::OnBnClickedButton5)
 	ON_BN_CLICKED(IDC_BUTTON6, &Cfarseer3mfcDlg::OnBnClickedButton6)
 	ON_BN_CLICKED(IDC_BUTTON7, &Cfarseer3mfcDlg::OnBnClickedButton7)
+	ON_BN_CLICKED(IDC_BUTTON8, &Cfarseer3mfcDlg::OnBnClickedButton8)
 END_MESSAGE_MAP()
 
 
@@ -109,6 +112,8 @@ BOOL Cfarseer3mfcDlg::OnInitDialog()
 
 	GetDlgItem(edScaleX)->SetWindowText(L"100");
 	GetDlgItem(edScaleY)->SetWindowText(L"100");
+	GetDlgItem(edTolerance)->SetWindowText(L"0.6");
+	GetDlgItem(edBuffSize)->SetWindowText(L"20");
 
 	vCbShowMessage.SetWindowText(_T("Show message"));
 
@@ -264,4 +269,18 @@ void Cfarseer3mfcDlg::outpMeasJourn()
 void Cfarseer3mfcDlg::OnBnClickedButton7()
 {
 	appRef->demandOp = 4;
+}
+
+
+void Cfarseer3mfcDlg::OnBnClickedButton8()
+{
+	CString tol;
+	vEdTolerance.GetWindowText(tol);
+	appRef->expTolerance = _ttof(tol);
+
+	CString bufs;
+	vEdBuffSize.GetWindowText(bufs);
+	appRef->expBufSize = _ttoi(bufs);
+
+	appRef->demandOp = 5;
 }

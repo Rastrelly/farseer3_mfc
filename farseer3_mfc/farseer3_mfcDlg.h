@@ -48,4 +48,7 @@ public:
 	CEdit vEdJournal;
 	CButton vCbShowMessage;
 	afx_msg void OnBnClickedButton7();
+	afx_msg void OnBnClickedButton8();
+	CEdit vEdTolerance;
+	CEdit vEdBuffSize;
 };
