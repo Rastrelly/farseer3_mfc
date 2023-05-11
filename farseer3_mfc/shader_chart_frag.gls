@@ -1,0 +1,14 @@
+#version 440 core
+
+out vec4 FragColor;
+
+in vec4 vertClr;
+in vec2 texCoord;
+
+uniform sampler2D ourTexture;
+
+void main()
+{
+    vec4 tColor = texture(ourTexture, texCoord);
+	FragColor = vertClr * tColor;
+}
