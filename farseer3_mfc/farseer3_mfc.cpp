@@ -20,7 +20,7 @@ struct infoLine
 };
 
 bool needTexUpdate = true;
-int texW, texH;
+int texW, texH, texCh;
 //std::string texture_path = "test.png";
 std::string texture_path = "sample.jpg";
 unsigned char *tex_data;
@@ -163,6 +163,7 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 			pt2.y = cy;
 			stage=0;
 			op = 0;
+			theApp.demandOp = 0;
 			scaleX = nomX / abs(pt1.x - pt2.x);
 			myIl.doDraw = false;
 			theApp.fScaleX = scaleX;
@@ -186,6 +187,7 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 			pt2.y = cy;
 			stage = 0;
 			op = 0;
+			theApp.demandOp = 0;
 			scaleY = nomY / abs(pt1.y-pt2.y);
 			myIl.doDraw = false;
 			theApp.fScaleY = scaleY;
@@ -209,6 +211,7 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 			pt2.y = cy;
 			stage = 0;
 			op = 0;
+			theApp.demandOp = 0;
 			float dx = abs(pt1.x - pt2.x) * scaleX;
 			float dy = abs(pt1.y - pt2.y) * scaleY;
 			lastMeasurement = sqrt(pow(dx, 2) + pow(dy, 2));
@@ -231,18 +234,18 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 	{
 		if (stage == 0)
 		{
-			pt1.x = cx;
-			pt1.y = cy;
 			stage = 0;
 			op = 0;
-			glm::vec3 clr = getDataPixels(tex_data, 4, (int)pt1.x, (int)pt1.y, texW);
+			theApp.demandOp = 0;
+
+			//texture is inverted, so texH - cy
+			glm::vec3 clr = getDataPixels(tex_data, texCh, cx, texH - cy, texW, texH);
 
 			CString outp;
-			outp.Format(_T("Pixel Colour = %f, %f, %f (%d, %d, %d)"), clr.r, clr.g, clr.b, (int)(clr.r*256.0f), (int)(clr.g*256.0f), (int)(clr.b*256.0f));
+			outp.Format(_T("Pixel Colour at [%d;%d] = %f, %f, %f (%d, %d, %d)"), (int)cx, (int)cy, clr.r, clr.g, clr.b, (int)(clr.r*256.0f), (int)(clr.g*256.0f), (int)(clr.b*256.0f));
 			AfxMessageBox(outp, MB_OK | MB_ICONINFORMATION);
 
 			myIl.doDraw = false;
-			theApp.fScaleX = scaleX;
 		}
 	}
 
@@ -252,9 +255,8 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 
 void makeMainTex(std::string file)
 {
-	int nch = 0;
 	delete(tex_data);
-	tex_data = getImage(file, texW, texH, nch);
+	tex_data = getImage(file, texW, texH, texCh);
 	mTex = makeTexture(file);
 }
 
@@ -364,7 +366,9 @@ void oglThreadFunc()
 	glfwSetScrollCallback(oMan.window, scroll_callback);
 
 	oMan.addShader("shader_chart_vert.gls", "shader_chart_frag.gls");
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	oMan.addShader("shader_simple_vert.gls", "shader_simple_frag.gls");
+
+	glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 
 	while (!glfwWindowShouldClose(oMan.window))
@@ -397,11 +401,11 @@ void oglThreadFunc()
 		//SetDlgItemText((HWND)IDC_STATIC1, 0, L"Hello");
 		theApp.ww = wWidth;
 		theApp.wh = wHeight;
-
-		theApp.oglCurX = curX;
-		theApp.oglCurY = curY;
-
+		
 		calcTransCurPos(curX, curY, camX, camY, 1.0f, 1.0f, curXTrans, curYTrans);
+
+		theApp.oglCurX = curXTrans;
+		theApp.oglCurY = curYTrans;
 
 		dlgRef->updateOglState();
         
@@ -418,13 +422,14 @@ void oglThreadFunc()
 		oMan.setView(mat_view);
 		oMan.setProjection(mat_persp);
 		oMan.updateProjectionForShader(0);
+		oMan.updateProjectionForShader(1);
 
 		drawPlaneOrigin(oMan.getShader(0), glm::vec3(0.0f), texW, texH, glm::vec3(1.0f,1.0f,1.0f), mTex, true);
 		if (myIl.doDraw)
 		{
 			glm::vec3 ilp1(myIl.sp1.x, myIl.sp1.y, 1.0f);
 			glm::vec3 ilp2(myIl.sp2.x, myIl.sp2.y, 1.0f);
-			drawLine(oMan.getShader(0), ilp1, glm::vec3(curXTrans, curYTrans, 1.0f), myIl.colour);
+			drawLine(oMan.getShader(1), ilp1, glm::vec3(curXTrans, curYTrans, 1.0f), myIl.colour);
 		}
 
 		oMan.endDraw();

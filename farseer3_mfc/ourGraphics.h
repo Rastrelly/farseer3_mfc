@@ -77,6 +77,6 @@ void drawCube(Shader * shad, glm::vec3 center, glm::vec3 radius, glm::vec3 colou
 void drawPlane(Shader * shad, glm::vec3 p1, glm::vec3 radius, glm::vec3 colour, unsigned int tex, bool usetex);
 void drawPlaneOrigin(Shader * shad, glm::vec3 p1, float plw, float plh, glm::vec3 colour, unsigned int tex, bool usetex);
 unsigned char * getImage(string filename, int &w, int &h, int &ch);
-glm::vec3 getDataPixels(unsigned char * rawdata, int channelCount, int cx, int cy, int w);
+glm::vec3 getDataPixels(unsigned char * rawdata, int channelCount, int cx, int cy, int w, int h);
 
 void clampVal(float &val, const float min, const float max);

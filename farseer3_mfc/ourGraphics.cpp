@@ -667,20 +667,23 @@ unsigned char * getImage(string filename, int &w, int &h, int &ch)
 	return stbi_load(filename.c_str(), &w, &h, &ch, STBI_rgb_alpha);
 }
 
-glm::vec3 getDataPixels(unsigned char * rawdata, int channelCount, int cx, int cy, int w)
+glm::vec3 getDataPixels(unsigned char * rawdata, int channelCount, int cx, int cy, int w, int h)
 {
-	unsigned bytePerPixel = channelCount;
-	unsigned char* pixelOffset = rawdata + (cx + w * cy) * bytePerPixel;
-	unsigned char r = pixelOffset[0];
-	unsigned char g = pixelOffset[1];
-	unsigned char b = pixelOffset[2];
-	unsigned char a = channelCount >= 4 ? pixelOffset[3] : 0xff;
+	if ((cx >= 0) && (cx < w) && (cy >= 0) && (cy < h))
+	{
+		//(cx + w * cy) * channelCount + 1
+		int tck = 4;
+		int p = 2;
+		int ir = rawdata[((cx + cy * w) * tck)+0];
+		int ig = rawdata[((cx + cy * w) * tck)+1];
+		int ib = rawdata[((cx + cy * w) * tck)+2];
 
-	int ir = (int)r;
-	int ig = (int)g;
-	int ib = (int)b;
+		glm::vec3 clr((float)ir / 256.0f, (float)ig / 256.0f, (float)ib / 256.0f);
 
-	glm::vec3 clr((float)ir/256.0f, (float)ig / 256.0f, (float)ib / 256.0f);
-
-	return clr;
+		return clr;
+	}
+	else
+	{
+		return glm::vec3(0.0f);
+	}
 }
