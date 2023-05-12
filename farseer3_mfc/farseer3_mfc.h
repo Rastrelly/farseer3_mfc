@@ -1,14 +1,10 @@
-﻿
-// farseer3_mfc.h: главный файл заголовка для приложения PROJECT_NAME
-//
-
-#pragma once
+﻿#pragma once
 
 #ifndef __AFXWIN_H__
 	#error "include 'pch.h' before including this file for PCH"
 #endif
 
-#include "resource.h"		// основные символы
+#include "resource.h"		
 #include <thread>
 
 #include "ourGraphics.h"
@@ -21,10 +17,6 @@
 void oglThreadFunc();
 void window_size_callback(GLFWwindow* window, int width, int height);
 
-
-// TFarseer3:
-// Сведения о реализации этого класса: farseer3_mfc.cpp
-//
 
 class TFarseer3 : public CWinApp
 {
@@ -43,11 +35,9 @@ public:
 	flarr getMeasJournal();
 
 
-// Переопределение
 public:
 	virtual BOOL InitInstance();
 
-// Реализация
 
 	DECLARE_MESSAGE_MAP()
 };

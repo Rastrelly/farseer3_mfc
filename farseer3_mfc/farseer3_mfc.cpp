@@ -1,7 +1,4 @@
 ﻿
-// farseer3_mfc.cpp: определяет поведение классов для приложения.
-//
-
 #include "pch.h"
 #include "framework.h"
 #include "farseer3_mfc.h"
@@ -209,7 +206,6 @@ void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, flo
 		cLinePath = glm::length(cCrStart - crPos);
 		deltaSet.clear();
 		colourBuff.clear();
-		cCrPath = glm::length(cCrStart - crStart);
 		while (cLinePath < crLen)
 		{
 			cLinePath = glm::length(cCrStart - crPos);
@@ -218,7 +214,11 @@ void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, flo
 			//remove first element if the buffer is full
 			if (colourBuff.size() > crawlerBuffer) colourBuff.erase(colourBuff.begin());
 			float cDelta = cbDelta(colourBuff);
-			if (cDelta > tolerance) deltaSet.push_back(crPos-crDir*glm::vec2((float)(colourBuff.size())/2.0f));
+			if (cDelta > tolerance)
+			{
+				deltaSet.push_back(crPos - crDir * glm::vec2((float)(colourBuff.size()) / 2.0f));
+				colourBuff.clear(); //clean up the buffer if delta is found
+			}
 			crPos += crDir;
 		}
 		if (deltaSet.size() == 0)

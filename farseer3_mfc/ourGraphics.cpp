@@ -672,7 +672,7 @@ glm::vec3 getDataPixels(unsigned char * rawdata, int channelCount, int cx, int c
 	if ((cx >= 0) && (cx < w) && (cy >= 0) && (cy < h))
 	{
 		//(cx + w * cy) * channelCount + 1
-		int tck = 4;
+		int tck = 4; //Y U NO WORK WITH channelCount???
 		int p = 2;
 		int ir = rawdata[((cx + cy * w) * tck)+0];
 		int ig = rawdata[((cx + cy * w) * tck)+1];

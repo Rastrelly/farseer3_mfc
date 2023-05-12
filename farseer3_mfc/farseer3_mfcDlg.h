@@ -1,32 +1,28 @@
-﻿
-// farseer3_mfcDlg.h: файл заголовка
-//
-
-#pragma once
+﻿#pragma once
 
 
-// Диалоговое окно Cfarseer3mfcDlg
+
 class Cfarseer3mfcDlg : public CDialogEx
 {
-// Создание
+
 public:
 	TFarseer3 * appRef;
-	Cfarseer3mfcDlg(CWnd* pParent = nullptr);	// стандартный конструктор
+	Cfarseer3mfcDlg(CWnd* pParent = nullptr);
 
-// Данные диалогового окна
+
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_FARSEER3_MFC_DIALOG };
 #endif
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// поддержка DDX/DDV
+	virtual void DoDataExchange(CDataExchange* pDX);	
 
 
-// Реализация
+
 protected:
 	HICON m_hIcon;
 
-	// Созданные функции схемы сообщений
+
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();

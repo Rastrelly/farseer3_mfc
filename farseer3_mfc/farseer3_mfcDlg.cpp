@@ -1,8 +1,4 @@
-﻿
-// farseer3_mfcDlg.cpp: файл реализации
-//
-
-#include "pch.h"
+﻿#include "pch.h"
 #include "framework.h"
 #include "farseer3_mfc.h"
 #include "farseer3_mfcDlg.h"
@@ -13,22 +9,18 @@
 #endif
 
 
-// Диалоговое окно CAboutDlg используется для описания сведений о приложении
-
 class CAboutDlg : public CDialogEx
 {
 public:
 	CAboutDlg();
 
-// Данные диалогового окна
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // поддержка DDX/DDV
+	virtual void DoDataExchange(CDataExchange* pDX);  
 
-// Реализация
 protected:
 	DECLARE_MESSAGE_MAP()
 };
@@ -44,9 +36,6 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
-
-
-// Диалоговое окно Cfarseer3mfcDlg
 
 
 
@@ -83,8 +72,6 @@ BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON8, &Cfarseer3mfcDlg::OnBnClickedButton8)
 END_MESSAGE_MAP()
 
-
-// Обработчики сообщений Cfarseer3mfcDlg
 
 BOOL Cfarseer3mfcDlg::OnInitDialog()
 {
@@ -133,19 +120,14 @@ void Cfarseer3mfcDlg::OnSysCommand(UINT nID, LPARAM lParam)
 	}
 }
 
-// При добавлении кнопки свертывания в диалоговое окно нужно воспользоваться приведенным ниже кодом,
-//  чтобы нарисовать значок.  Для приложений MFC, использующих модель документов или представлений,
-//  это автоматически выполняется рабочей областью.
-
 void Cfarseer3mfcDlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // контекст устройства для рисования
+		CPaintDC dc(this);
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// Выравнивание значка по центру клиентского прямоугольника
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -153,7 +135,6 @@ void Cfarseer3mfcDlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// Нарисуйте значок
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -162,8 +143,6 @@ void Cfarseer3mfcDlg::OnPaint()
 	}
 }
 
-// Система вызывает эту функцию для получения отображения курсора при перемещении
-//  свернутого окна.
 HCURSOR Cfarseer3mfcDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
@@ -182,7 +161,6 @@ void Cfarseer3mfcDlg::OnBnClickedButton1()
 
 void Cfarseer3mfcDlg::OnBnClickedOk()
 {
-	// TODO: добавьте свой код обработчика уведомлений
 	CDialogEx::OnOK();
 }
 
