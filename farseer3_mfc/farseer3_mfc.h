@@ -13,6 +13,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtx/perpendicular.hpp>
 
 void oglThreadFunc();
 void window_size_callback(GLFWwindow* window, int width, int height);
@@ -28,6 +30,7 @@ public:
 	float nomSizeX, nomSizeY, fScaleX, fScaleY;
 	float expTolerance;
 	int expBufSize;
+	int expNSteps;
 		
 	int demandOp;
 

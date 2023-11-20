@@ -54,6 +54,7 @@ void Cfarseer3mfcDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, cbShowMessage, vCbShowMessage);
 	DDX_Control(pDX, edTolerance, vEdTolerance);
 	DDX_Control(pDX, edBuffSize, vEdBuffSize);
+	DDX_Control(pDX, edNSteps, vEdNSteps);
 }
 
 BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)
@@ -70,6 +71,7 @@ BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON6, &Cfarseer3mfcDlg::OnBnClickedButton6)
 	ON_BN_CLICKED(IDC_BUTTON7, &Cfarseer3mfcDlg::OnBnClickedButton7)
 	ON_BN_CLICKED(IDC_BUTTON8, &Cfarseer3mfcDlg::OnBnClickedButton8)
+	ON_EN_CHANGE(edBuffSize2, &Cfarseer3mfcDlg::OnEnChangeedbuffsize2)
 END_MESSAGE_MAP()
 
 
@@ -101,6 +103,7 @@ BOOL Cfarseer3mfcDlg::OnInitDialog()
 	GetDlgItem(edScaleY)->SetWindowText(L"100");
 	GetDlgItem(edTolerance)->SetWindowText(L"0.6");
 	GetDlgItem(edBuffSize)->SetWindowText(L"20");
+	GetDlgItem(edNSteps)->SetWindowText(L"20");
 
 	vCbShowMessage.SetWindowText(_T("Show message"));
 
@@ -260,5 +263,19 @@ void Cfarseer3mfcDlg::OnBnClickedButton8()
 	vEdBuffSize.GetWindowText(bufs);
 	appRef->expBufSize = _ttoi(bufs);
 
+	vEdNSteps.GetWindowText(bufs);
+	appRef->expNSteps = _ttoi(bufs);
+
 	appRef->demandOp = 5;
+}
+
+
+void Cfarseer3mfcDlg::OnEnChangeedbuffsize2()
+{
+	// TODO:  Если это элемент управления RICHEDIT, то элемент управления не будет
+	// send this notification unless you override the CDialogEx::OnInitDialog()
+	// функция и вызов CRichEditCtrl().SetEventMask()
+	// with the ENM_CHANGE flag ORed into the mask.
+
+	// TODO:  Добавьте код элемента управления
 }

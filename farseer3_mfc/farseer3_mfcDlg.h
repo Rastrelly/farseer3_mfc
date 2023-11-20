@@ -47,4 +47,6 @@ public:
 	afx_msg void OnBnClickedButton8();
 	CEdit vEdTolerance;
 	CEdit vEdBuffSize;
+	afx_msg void OnEnChangeedbuffsize2();
+	CEdit vEdNSteps;
 };

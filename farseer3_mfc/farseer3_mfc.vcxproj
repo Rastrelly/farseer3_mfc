@@ -76,7 +76,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\CPPLIBS\freetype-windows-binaries-2.13.0\include;C:\CPPLIBS\glfw32\include;C:\CPPLIBS\stb_image;C:\CPPLIBS\glm;C:\CPPLIBS\glad\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\CPPLIBS\GTE;C:\CPPLIBS\boost_1_77_0;C:\CPPLIBS\freetype-windows-binaries-2.13.0\include;C:\CPPLIBS\glfw32\include;C:\CPPLIBS\stb_image;C:\CPPLIBS\glm;C:\CPPLIBS\glad\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\CPPLIBS\glfw32\lib-vc2017;C:\CPPLIBS\freetype-windows-binaries-2.13.0\release static\vs2015-2022\win32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -190,9 +190,11 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ConvexHull2.h" />
     <ClInclude Include="farseer3_mfc.h" />
     <ClInclude Include="farseer3_mfcDlg.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="MinimumAreaBox2.h" />
     <ClInclude Include="ourGraphics.h" />
     <ClInclude Include="ourGraphicsFreeType.h" />
     <ClInclude Include="pch.h" />

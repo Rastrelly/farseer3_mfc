@@ -21,8 +21,9 @@
 #define IDC_BUTTON7                     1011
 #define IDC_BUTTON8                     1012
 #define edTolerance                     1013
-#define edScaleY2                       1014
 #define edBuffSize                      1014
+#define edBuffSize2                     1015
+#define edNSteps                        1015
 
 // Next default values for new objects
 // 

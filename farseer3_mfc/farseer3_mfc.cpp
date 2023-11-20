@@ -5,9 +5,24 @@
 #include "farseer3_mfcDlg.h"
 #include <string>
 
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/box.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+
+#include "MinimumAreaBox2.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+
+//rectangle definition
+struct rectangle
+{
+	glm::vec2 center, axis1, axis2;
+	glm::vec2 extent, extentScaled;
+	float area;
+};
 
 struct infoLine
 {
@@ -38,8 +53,12 @@ glm::vec2 p2(0.0f);
 glm::vec2 tp1(0.0f), tp2(0.0f), tp3(0.0f), tp4(0.0f);
 float amTol = 0.6f;
 int amBS = 20;
+int amNSteps = 20;
+rectangle resultingRect;
 
 vector<glm::vec2> measMarkers;
+vector<glm::vec2> polyPoints;
+vector<glm::vec2> globalDeltaSet;
 
 int opId = 0; //0 - nothing
 			  //1 - scale x
@@ -56,6 +75,11 @@ bool mDown = false;
 bool mLeft = false;
 bool mRight = false;
 bool mMid = false;
+
+//forward declarations
+void processPointSet(vector<glm::vec2> &dataPts);
+gte::OrientedBox2<float> getMAR(vector<glm::vec2> convHull);
+rectangle getBoundingBox();
 
 
 // TFarseer3
@@ -87,7 +111,7 @@ BOOL TFarseer3::InitInstance()
 
 	CMFCVisualManager::SetDefaultManager(RUNTIME_CLASS(CMFCVisualManagerWindows));
 
-	SetRegistryKey(_T("Локальные приложения, созданные с помощью мастера приложений"));
+	SetRegistryKey(_T("Local app"));
 
 	Cfarseer3mfcDlg dlg;
 
@@ -107,8 +131,8 @@ BOOL TFarseer3::InitInstance()
 	}
 	else if (nResponse == -1)
 	{
-		TRACE(traceAppMsg, 0, "Предупреждение. Не удалось создать диалоговое окно, поэтому работа приложения неожиданно завершена.\n");
-		TRACE(traceAppMsg, 0, "Предупреждение. При использовании элементов управления MFC для диалогового окна невозможно #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS.\n");
+		TRACE(traceAppMsg, 0, "Error making dialog window, quitting.\n");
+		TRACE(traceAppMsg, 0, "Error adding MFC dialog controls. Imossible to #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS.\n");
 	}
 
 	if (pShellManager != nullptr)
@@ -148,6 +172,10 @@ float getDist(glm::vec2 pt1, glm::vec2 pt2)
 	return sqrt(pow(pt1.x - pt2.x, 2) + pow(pt1.y - pt2.y, 2));
 }
 
+float colAvg(glm::vec3 col)
+{
+	return (col.r + col.g + col.b) / 3.0f;
+}
 
 float cbDelta(vector<glm::vec3> colourBuff)
 {
@@ -155,11 +183,11 @@ float cbDelta(vector<glm::vec3> colourBuff)
 	float delta = 0.0f;
 	if (colourBuff.size() > 1)
 	{
-		float ccmn = 0.0f;
-		float ccmx = 0.0f;
+		float ccmn = colAvg(colourBuff[0]);
+		float ccmx = colAvg(colourBuff[0]);
 		for (glm::vec3 cc : colourBuff)
 		{			
-			float ccol = (cc.r + cc.g + cc.b) / 3.0f;
+			float ccol = colAvg(cc);
 			if (n == 0) { ccmn = ccol; ccmx = ccol; }
 			if (ccmn > ccol) ccmn = ccol;
 			if (ccmx < ccol) ccmx = ccol;
@@ -172,10 +200,41 @@ float cbDelta(vector<glm::vec3> colourBuff)
 		return 0.0f;
 }
 
-
-
-void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, float tolerance, int crawlerBuffer)
+void autoWeighDeltas(vector<glm::vec2> &ds, vector<float> &dsc)
 {
+	int l = ds.size();
+	float sum = 0.0f;
+	float avgD=0.0f;
+	for (int i = 0; i < ds.size() - 1; i++)
+	{
+		sum += glm::length(ds[i] - ds[i + 1]);
+	}
+	avgD = sum / (float)ds.size();
+
+	bool opDone = false;
+
+	do
+	{
+		opDone = false;
+		for (int i = 0; i < ds.size() - 1; i++)
+		{
+			if (glm::length(ds[i] - ds[i + 1]) < avgD)
+			{
+				ds[i] = (ds[i] + ds[i + 1]) / 2.0f;
+				ds.erase(ds.begin() + i + 1);
+				dsc[i] = (dsc[i] + dsc[i + 1]) / 2.0f;
+				dsc.erase(dsc.begin() + i + 1);
+				opDone = true;
+			}
+		}
+	} while (opDone);
+}
+
+void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, float tolerance, int crawlerBuffer, int nSteps)
+{
+	//clear mesurement markers
+	measMarkers.clear();
+	
 	//get view direction from point 1 to point 2
 	glm::vec2 axDir = glm::normalize(pt2 - pt1);
 
@@ -184,6 +243,7 @@ void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, flo
 
 	//get expected crawler path lengths
 	float axLen = glm::length(pt2 - pt1);
+	float axStep = axLen / (float)nSteps;
 	float crLen = glm::length(pt4 - pt3);
 
 	//position crawler at starting point
@@ -193,6 +253,10 @@ void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, flo
 
 	vector<glm::vec3> colourBuff = {}; //colour buffer for crawler
 	vector<glm::vec2> deltaSet =   {}; //set of found deltas
+	vector<float> deltaSetColours = {}; //colour buffer for crawler
+
+	globalDeltaSet.clear();
+	polyPoints.clear();
 
 	//all variables are now set, launch crawler
 	float cCrPath = glm::length(cCrStart - crStart);
@@ -205,6 +269,7 @@ void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, flo
 		cCrPath = glm::length(cCrStart - crStart);
 		cLinePath = glm::length(cCrStart - crPos);
 		deltaSet.clear();
+		deltaSetColours.clear();
 		colourBuff.clear();
 		while (cLinePath < crLen)
 		{
@@ -213,49 +278,112 @@ void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, flo
 			colourBuff.push_back(cClr);
 			//remove first element if the buffer is full
 			if (colourBuff.size() > crawlerBuffer) colourBuff.erase(colourBuff.begin());
-			float cDelta = cbDelta(colourBuff);
-			if (cDelta > tolerance)
+			if (colourBuff.size() == crawlerBuffer)
 			{
-				deltaSet.push_back(crPos - crDir * glm::vec2((float)(colourBuff.size()) / 2.0f));
-				colourBuff.clear(); //clean up the buffer if delta is found
+				float cDelta = cbDelta(colourBuff);
+				if (cDelta > tolerance)
+				{
+					deltaSet.push_back(crPos - crDir * glm::vec2((float)(colourBuff.size()) / 2.0f));
+					deltaSetColours.push_back(cDelta);
+					colourBuff.clear(); //clean up the buffer if delta is found
+					crPos += crDir*(float)colourBuff.size()- crDir;
+				}
 			}
 			crPos += crDir;
 		}
-		if (deltaSet.size() == 0)
-		{
-			deltaSet.push_back(cCrStart);
-			deltaSet.push_back(crPos);
+
+		if (deltaSet.size() > 1)
+		{			
+
+			//autoWeighDeltas(deltaSet, deltaSetColours);
+
+			for (glm::vec2 pt : deltaSet)
+			{
+				globalDeltaSet.push_back(pt);
+			}
+
+			float maxDelta1 = deltaSetColours[0];
+			float maxDelta2 = deltaSetColours[deltaSetColours.size() - 1];
+			int id1=0, id2= deltaSetColours.size() - 1;
+			for (int ii = 0; ii < deltaSetColours.size()/2; ii++)
+			{
+				if (maxDelta1 < deltaSetColours[ii])
+				{
+					maxDelta1 = deltaSetColours[ii];
+					id1 = ii;
+				}
+			}
+			for (int ii = deltaSetColours.size()-1; ii > id1; ii--)
+			{
+				if (maxDelta2 < deltaSetColours[ii])
+				{
+					maxDelta2 = deltaSetColours[ii];
+					id2 = ii;
+				}
+			}
+
+
+			if (id1 > id2)
+			{
+				int bf = id2; id2 = id1; id1 = bf;
+			}
+
+			glm::vec2 mpt1 = deltaSet[id1];
+			glm::vec2 mpt2 = deltaSet[id2];
+			
+			measMarkers.push_back(mpt1);
+			measMarkers.push_back(mpt2);
 		}
-		if (deltaSet.size() == 1)
-		{
-			deltaSet.push_back(crPos);
-		}
-
-		glm::vec2 mpt1 = deltaSet[0];
-		glm::vec2 mpt2 = deltaSet[deltaSet.size()-1];
-
-		measMarkers.push_back(mpt1);
-		measMarkers.push_back(mpt2);
-
-		float dx = abs(mpt1.x - mpt2.x) * scaleX;
-		float dy = abs(mpt1.y - mpt2.y) * scaleY;
-		float measurement = sqrt(pow(dx, 2) + pow(dy, 2));
-		sizeSet.push_back(measurement);
-
-		cCrStart += axDir;
+		
+		cCrStart += axDir*axStep;
 		crPos = cCrStart;
 	}
 
+	//remove extreme values
+	processPointSet(measMarkers);
+
+	resultingRect = getBoundingBox();
+
+	//scale values
+	
+	int ssl = measMarkers.size();
+
+	for (int ii=0;ii<ssl;ii+=2)
+	{
+		float dx = abs(measMarkers[ii+1].x - measMarkers[ii].x) * scaleX;
+		float dy = abs(measMarkers[ii+1].y - measMarkers[ii].y) * scaleY;
+		float measurement = sqrt(pow(dx, 2) + pow(dy, 2));
+		sizeSet.push_back(measurement);
+	}
+
+	resultingRect.extentScaled.x = resultingRect.extent.x * scaleX;
+	resultingRect.extentScaled.y = resultingRect.extent.y * scaleY;
+
+	//process size set
 	float sum = 0.0f;
 	for (float cs : sizeSet)
 	{
 		sum += cs;
 	}
 	
-	lastMeasurement = sum / (float)(sizeSet.size());
+	if (sizeSet.size() > 0)
+	{
+		lastMeasurement = sum / (float)(sizeSet.size());
 
-	measJournal.push_back(lastMeasurement);
-	dlgRef->outpMeasJourn();
+		measJournal.push_back(lastMeasurement);
+		measJournal.push_back(resultingRect.extentScaled.x);
+		measJournal.push_back(resultingRect.extentScaled.y);
+		
+	}
+	else
+	{
+		lastMeasurement = -1;
+		measJournal.push_back(-1);
+		measJournal.push_back(-1);
+		measJournal.push_back(-1);
+	}
+
+    dlgRef->outpMeasJourn();
 
 	CString outp;
 	outp.Format(_T("Auto measured Value = %f"), lastMeasurement);
@@ -409,12 +537,148 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 			op = 0;
 			theApp.demandOp = 0;
 
-			autoMeasure(tp1, tp2, tp3, tp4,amTol,amBS);
+			autoMeasure(tp1, tp2, tp3, tp4,amTol,amBS,amNSteps);
 
 			myIl.doDraw = false;
 		}
 	}
 
+}
+
+void processPointSet(vector<glm::vec2> &dataPts)
+{
+	if (dataPts.size() > 4)
+	{
+
+		int cIPoint = 0;
+		float minDeltaId = 0, minDelta = 0;
+		float maxDeltaId = 0, maxDelta = 0;
+		for (int i = 0; i < 2; i++)
+		{
+			if (dataPts.size() > 6)
+			{
+				minDeltaId = 0;
+				minDelta = glm::length(dataPts[1] - dataPts[0]);
+				while (cIPoint < dataPts.size() - 1)
+				{
+					float cPairLength = glm::length(dataPts[cIPoint + 1] - dataPts[cIPoint]);
+					if ((cPairLength < minDelta) && (i == 0))
+					{
+						minDeltaId = cIPoint;
+						minDelta = cPairLength;
+
+					}
+					if ((cPairLength > maxDelta) && (i == 1))
+					{
+						maxDeltaId = cIPoint;
+						maxDelta = cPairLength;
+					}
+					cIPoint += 2;
+				}
+			}
+			if (i == 0)
+			{
+				dataPts.erase(dataPts.begin() + minDeltaId);
+				dataPts.erase(dataPts.begin() + minDeltaId);
+			}
+			if (i == 1)
+			{
+				dataPts.erase(dataPts.begin() + maxDeltaId);
+				dataPts.erase(dataPts.begin() + maxDeltaId);
+			}
+		}
+	}
+}
+
+using MABRational = double;
+
+gte::OrientedBox2<float> getMAR(vector<glm::vec2> convHull)
+{
+	gte::MinimumAreaBox2<float, MABRational> mab{};
+	const int a = convHull.size();
+	vector<gte::Vector2<float>> pts = {};
+
+	for (glm::vec2 pt : convHull)
+	{
+		gte::Vector2<float> cpt;
+		cpt[0] = pt.x;
+		cpt[1] = pt.y;
+		pts.push_back(cpt);
+	}
+
+	return mab(a,&pts[0]);
+}
+
+
+//calc bounding rectangle
+rectangle getBoundingBox()
+{
+	
+	if (measMarkers.size() > 4)
+	{
+		typedef boost::geometry::model::d2::point_xy<double> point;
+
+		boost::geometry::model::polygon<point> polygon;
+
+		string polyExpression = "";
+
+		polyPoints.clear();
+
+		int counter = 0;
+		int ir = 0;
+		int dir = 1;
+		bool swapped = false;
+		while (counter < measMarkers.size())
+		{
+			if (ir >= 0 && ir < measMarkers.size())
+			{
+				string cp_add = "";
+				if (counter != 0) cp_add = ",";
+
+				glm::vec2 mp = measMarkers[ir];				
+
+				string cp = cp_add + to_string(mp.x) + " " + to_string(mp.y);
+				polyExpression += cp;
+				counter++;
+
+				ir += 2 * dir;
+
+				if ((ir >= measMarkers.size()) && (!swapped)) {
+					ir--; dir = -1; swapped = true;
+				}
+			}
+			else break;
+		}
+
+		string polyExpressionFull = "POLYGON((" + polyExpression + "))";
+
+		boost::geometry::read_wkt(polyExpressionFull.c_str(), polygon);
+
+		boost::geometry::model::polygon<point> pHull;
+		boost::geometry::convex_hull(polygon, pHull);
+
+		//turn convex hull to a regular vector
+		vector<glm::vec2> hullPoints = {};
+		for (const auto& point : pHull.outer())
+		{
+			float x = point.x();
+			float y = point.y();
+			hullPoints.push_back(glm::vec2(x, y));
+			polyPoints.push_back(glm::vec2(x, y));
+		}
+
+		//get rectangle
+		rectangle minRect;
+		
+		gte::OrientedBox2<float> myMAR = getMAR(hullPoints);
+		minRect.extent = { myMAR.extent[0], myMAR.extent[1] };
+		minRect.center = { myMAR.center[0], myMAR.center[1] };
+		minRect.axis1 = { myMAR.axis[0][0], myMAR.axis[0][1] };
+		minRect.axis2 = { myMAR.axis[1][0], myMAR.axis[1][1] };		
+
+		return minRect;
+	}
+	else return { {-1,-1},{-1,-1},{-1,-1},{-1,-1},{-1,-1},-1 };
 }
 
 
@@ -520,6 +784,8 @@ std::string CStringToStr(CString inp)
 }
 
 
+
+
 //main thread func
 void oglThreadFunc()
 {
@@ -565,6 +831,7 @@ void oglThreadFunc()
 			{
 				amTol = theApp.expTolerance;
 				amBS =  theApp.expBufSize;
+				amNSteps = theApp.expNSteps;
 			}
 		}
 
@@ -603,6 +870,27 @@ void oglThreadFunc()
 		while (measMarkers.size() > 200)
 		{
 			measMarkers.erase(measMarkers.begin());
+		}
+
+		for (glm::vec2 mp : globalDeltaSet)
+		{
+			drawPlaneOrigin(oMan.getShader(1), glm::vec3(mp.x, mp.y, 1.5f), 5.0f, 5.0f, glm::vec3(1.0f, 0.0f, 1.0f), 0, false);
+		}
+
+		if (polyPoints.size()>2)
+		for (int i = 0; i < polyPoints.size() - 1; i++)
+		{
+			drawLine(oMan.getShader(1), glm::vec3(polyPoints[i],1.0f), glm::vec3(polyPoints[i+1],1.0f), glm::vec3(0.0f,1.0f,0.0f));
+			if (i== polyPoints.size() - 2)
+				drawLine(oMan.getShader(1), glm::vec3(polyPoints[i+1], 1.0f), glm::vec3(polyPoints[0], 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+
+		if (resultingRect.extent.length()>0)
+		{
+			drawLine(oMan.getShader(1), glm::vec3(resultingRect.center, 1.0f), glm::vec3(resultingRect.center+resultingRect.axis1*resultingRect.extent.x,1.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+			drawLine(oMan.getShader(1), glm::vec3(resultingRect.center, 1.0f), glm::vec3(resultingRect.center - resultingRect.axis1*resultingRect.extent.x, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+			drawLine(oMan.getShader(1), glm::vec3(resultingRect.center, 1.0f), glm::vec3(resultingRect.center + resultingRect.axis2*resultingRect.extent.y, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+			drawLine(oMan.getShader(1), glm::vec3(resultingRect.center, 1.0f), glm::vec3(resultingRect.center - resultingRect.axis2*resultingRect.extent.y, 1.0f), glm::vec3(1.0f, 1.0f, 0.0f));
 		}
 
 		if (myIl.doDraw)
