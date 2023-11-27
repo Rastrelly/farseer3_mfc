@@ -85,6 +85,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>C:\CPPLIBS\GTE;C:\CPPLIBS\boost_1_77_0;C:\CPPLIBS\freetype-windows-binaries-2.13.0\include;C:\CPPLIBS\glfw32\include;C:\CPPLIBS\stb_image;C:\CPPLIBS\glm;C:\CPPLIBS\glad\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\CPPLIBS\glfw32\lib-vc2017;C:\CPPLIBS\freetype-windows-binaries-2.13.0\release static\vs2015-2022\win32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -138,7 +139,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
