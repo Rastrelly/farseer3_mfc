@@ -371,8 +371,8 @@ void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, flo
 		lastMeasurement = sum / (float)(sizeSet.size());
 
 		measJournal.push_back(lastMeasurement);
-		measJournal.push_back(resultingRect.extentScaled.x);
-		measJournal.push_back(resultingRect.extentScaled.y);
+		measJournal.push_back(resultingRect.extentScaled.x*2);
+		measJournal.push_back(resultingRect.extentScaled.y*2);
 		
 	}
 	else
