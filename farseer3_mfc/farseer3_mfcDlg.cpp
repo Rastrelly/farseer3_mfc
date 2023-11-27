@@ -198,7 +198,7 @@ void Cfarseer3mfcDlg::updateOglState()
 void Cfarseer3mfcDlg::OnBnClickedCancel()
 {
 	const TCHAR szFilter[] = _T("JPG Files (*.jpg)|*.jpg|PNG Files (*.png)|*.png|All Files (*.*)|*.*||");
-	CFileDialog dlg(FALSE, _T("jpg"), NULL, OFN_ENABLESIZING | OFN_FILEMUSTEXIST, szFilter, this);
+	CFileDialog dlg(TRUE, _T("jpg"), NULL, OFN_ENABLESIZING | OFN_FILEMUSTEXIST, szFilter, this);
 	if (dlg.DoModal() == IDOK)
 	{
 		CString sFilePath = dlg.GetPathName();
