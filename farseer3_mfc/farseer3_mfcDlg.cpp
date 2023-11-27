@@ -72,6 +72,7 @@ BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON7, &Cfarseer3mfcDlg::OnBnClickedButton7)
 	ON_BN_CLICKED(IDC_BUTTON8, &Cfarseer3mfcDlg::OnBnClickedButton8)
 	ON_EN_CHANGE(edBuffSize2, &Cfarseer3mfcDlg::OnEnChangeedbuffsize2)
+	ON_BN_CLICKED(IDC_BUTTON9, &Cfarseer3mfcDlg::OnBnClickedButton9)
 END_MESSAGE_MAP()
 
 
@@ -272,10 +273,12 @@ void Cfarseer3mfcDlg::OnBnClickedButton8()
 
 void Cfarseer3mfcDlg::OnEnChangeedbuffsize2()
 {
-	// TODO:  Если это элемент управления RICHEDIT, то элемент управления не будет
-	// send this notification unless you override the CDialogEx::OnInitDialog()
-	// функция и вызов CRichEditCtrl().SetEventMask()
-	// with the ENM_CHANGE flag ORed into the mask.
 
-	// TODO:  Добавьте код элемента управления
+}
+
+
+void Cfarseer3mfcDlg::OnBnClickedButton9()
+{
+	appRef->clearMeasJournal();
+	outpMeasJourn();
 }

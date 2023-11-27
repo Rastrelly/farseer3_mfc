@@ -49,4 +49,5 @@ public:
 	CEdit vEdBuffSize;
 	afx_msg void OnEnChangeedbuffsize2();
 	CEdit vEdNSteps;
+	afx_msg void OnBnClickedButton9();
 };

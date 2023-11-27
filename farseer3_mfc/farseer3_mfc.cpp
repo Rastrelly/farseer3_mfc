@@ -166,6 +166,11 @@ flarr TFarseer3::getMeasJournal()
 	return measJournal;
 }
 
+void TFarseer3::clearMeasJournal()
+{
+	measJournal.clear();
+}
+
 //get distance
 float getDist(glm::vec2 pt1, glm::vec2 pt2)
 {

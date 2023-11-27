@@ -36,7 +36,7 @@ public:
 
 	void forceUpdateOglScales(bool byY);
 	flarr getMeasJournal();
-
+	void clearMeasJournal();
 
 public:
 	virtual BOOL InitInstance();
