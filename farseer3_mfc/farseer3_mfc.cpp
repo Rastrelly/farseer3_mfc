@@ -788,9 +788,6 @@ std::string CStringToStr(CString inp)
 	return fts;
 }
 
-
-
-
 //main thread func
 void oglThreadFunc()
 {

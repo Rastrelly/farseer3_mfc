@@ -62,6 +62,12 @@ unsigned int makeTexture(string fileName)
 	return tex;
 }
 
+void window_refresh_callback(GLFWwindow* window)
+{
+	glfwSwapBuffers(window);
+}
+
+
 bool OGLManager::initOGL(int pwx, int pwy, GLFWframebuffersizefun callback)
 {
 	glfwInit();
@@ -91,6 +97,7 @@ bool OGLManager::initOGL(int pwx, int pwy, GLFWframebuffersizefun callback)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	glfwSetWindowRefreshCallback(window, window_refresh_callback);
 	glfwSetFramebufferSizeCallback(window, callback);
 
 	return true;
