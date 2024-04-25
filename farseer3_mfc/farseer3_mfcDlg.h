@@ -31,6 +31,7 @@ protected:
 public:
 	void updateOglState();
 	void outpMeasJourn();
+	void logStuff(CString txt);
 	afx_msg void OnBnClickedButton1();
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnBnClickedButton4();
@@ -50,4 +51,5 @@ public:
 	afx_msg void OnEnChangeedbuffsize2();
 	CEdit vEdNSteps;
 	afx_msg void OnBnClickedButton9();
+	afx_msg void OnBnClickedButton10();
 };

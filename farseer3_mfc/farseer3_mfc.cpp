@@ -4,6 +4,7 @@
 #include "farseer3_mfc.h"
 #include "farseer3_mfcDlg.h"
 #include <string>
+#include <fstream>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/box.hpp>
@@ -235,10 +236,139 @@ void autoWeighDeltas(vector<glm::vec2> &ds, vector<float> &dsc)
 	} while (opDone);
 }
 
+
+void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
+{
+
+	//file output T__T
+	std::ofstream measLogFile("mLog.txt");
+
+	//clear mesurement markers
+	measMarkers.clear();
+
+	//log
+	dlgRef->logStuff(CString("Starting automeasure"));
+
+	//record here a set of point coords to measure
+	std::vector<glm::vec2> pointCandidates = {};
+	//record here the current scanline for the picture
+	std::vector<double> scanlineData = {};
+
+	int w = texW;
+	int h = texH;
+
+	//define first round of point candidates
+	for (int j = 0; j < h; j++)//Y run
+	{
+		measLogFile << "LINE " << j+1 << "\n";
+		scanlineData.clear();
+		scanlineData.resize(w);
+		double accumDelta = 0;
+		for (int i = 0; i < w; i++) //X run
+		{			
+			glm::vec3 cClr = getDataPixels(tex_data, texCh, i, j, w, h);
+			scanlineData[i] = colAvg(cClr);
+			if (i > 0)
+			{
+				double cDelta = scanlineData[i] - scanlineData[i - 1];
+				int deltaCount=0;
+				//accumulate delta value if the function has the same sign
+				if (((cDelta > 0 && accumDelta >= 0) || (cDelta < 0 && accumDelta <= 0)) && (deltaCount < crawlerBuffer))
+				{
+					accumDelta += cDelta;
+					deltaCount++;
+				}
+				else
+				{
+					if (abs(accumDelta) > tolerance)
+					{
+						int XC = i - deltaCount / 2;
+						int YC = j;
+						pointCandidates.push_back({XC, YC});
+						measMarkers.push_back({XC, h-YC});
+						measLogFile << "XC = " << XC << "; YC = " << YC << "\n";
+					}
+					accumDelta = 0;
+					deltaCount = 0;
+				}
+			}
+		}
+	}
+
+	//we now have a set of point candidates all across the image
+	//we need to filter them to get rid of fringe elements and errors
+	//for that we must determine the center of the setup
+	//we'll use average for now
+
+	int l = pointCandidates.size();
+	glm::vec2 midAvg = { 0,0 };
+	if (l > 0)
+	{
+		
+		midAvg = pointCandidates[0];
+		for (int i = 1; i < l; i++)
+		{
+			midAvg.x = 0.5f * (midAvg.x + pointCandidates[i].x);
+			midAvg.y = 0.5f * (midAvg.y + pointCandidates[i].y);
+		}
+	}
+	else
+	{
+		measJournal.push_back(-1);
+		dlgRef->outpMeasJourn();
+		measLogFile << "No point candidates found! \n";
+		measLogFile.close();
+		return;
+	}
+
+	//now we need the average distance of a point to the mid point
+	float distAvg = getDist(pointCandidates[0], midAvg);
+	for (int i = 1; i < l; i++)
+	{
+		distAvg = 0.5f*(distAvg + getDist(pointCandidates[i], midAvg));
+	}
+
+	//now filter throught point candidates to find those which
+	//are not too far and not too close from the average
+	measLogFile << "Filtered set \n";
+	std::vector<glm::vec2> pointCandsFiltered = {};
+	float searchTresholdLow =  0.75f; //an arbitrary search treshold
+	float searchTresholdHigh = 1.25f;
+	for (int i = 0; i < l; i++)
+	{
+		float cDist = getDist(pointCandidates[i], midAvg);
+		float distRatio = cDist / distAvg;
+		if ((distRatio >= searchTresholdLow) && (distRatio <= searchTresholdHigh))
+		{
+			pointCandsFiltered.push_back(pointCandidates[i]);
+			measMarkers.push_back(pointCandidates[i]);
+			measLogFile << "XC = " << pointCandidates[i].x << "; YC = " << pointCandidates[i].y << "\n";
+		}
+	}
+
+	processPointSet(pointCandsFiltered);
+
+	resultingRect = getBoundingBox();
+
+	//scale values
+
+	resultingRect.extentScaled.x = resultingRect.extent.x * scaleX;
+	resultingRect.extentScaled.y = resultingRect.extent.y * scaleY;
+	
+	measJournal.push_back(resultingRect.extentScaled.x * 2);
+	measJournal.push_back(resultingRect.extentScaled.y * 2);
+
+	dlgRef->outpMeasJourn();
+
+	measLogFile.close();
+}
+
+
 void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, float tolerance, int crawlerBuffer, int nSteps)
 {
 	//clear mesurement markers
 	measMarkers.clear();
+
 	
 	//get view direction from point 1 to point 2
 	glm::vec2 axDir = glm::normalize(pt2 - pt1);
@@ -402,7 +532,6 @@ void autoMeasure(glm::vec2 pt1, glm::vec2 pt2, glm::vec2 pt3, glm::vec2 pt4, flo
 //current operation and stage of procedure
 void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx, float cy)
 {
-
 	//get scale x
 	if (op == 1)
 	{
@@ -510,6 +639,7 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 	//automeasure
 	if (op == 5)
 	{
+		dlgRef->logStuff(CString("Op 5 called"));
 		if (stage == 0)
 		{
 			tp1.x = cx;
@@ -546,6 +676,16 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 
 			myIl.doDraw = false;
 		}
+
+	}
+
+
+	//full auto measure
+	if (op == 6)
+	{
+		dlgRef->logStuff(CString("Op 6 called"));
+		theApp.demandOp = 0;
+		fullAutoMeasure(amTol,1.0,amBS);
 	}
 
 }
@@ -835,6 +975,12 @@ void oglThreadFunc()
 				amBS =  theApp.expBufSize;
 				amNSteps = theApp.expNSteps;
 			}
+			if (cOp == 6)
+			{
+				amTol = theApp.expTolerance;
+				amBS = theApp.expBufSize;
+				amNSteps = theApp.expNSteps;
+			}
 		}
 
 		//SetDlgItemText((HWND)IDC_STATIC1, 0, L"Hello");
@@ -865,14 +1011,26 @@ void oglThreadFunc()
 
 		drawPlaneOrigin(oMan.getShader(0), glm::vec3(0.0f), texW, texH, glm::vec3(1.0f,1.0f,1.0f), mTex, true);
 
+		int mms = measMarkers.size();
+		int mmStep = 1;
+		if (mms > 200) mmStep = mms / 200;
+		if (mmStep == 0) mmStep = 1;
+		int stepCounter = 0;
 		for (glm::vec2 mp : measMarkers)
 		{
-			drawPlaneOrigin(oMan.getShader(1), glm::vec3(mp.x,mp.y,1.5f), 5.0f, 5.0f, glm::vec3(0.0f, 0.0f, 1.0f), 0, false);
+			//cull marker amt
+			stepCounter++;
+			if (stepCounter % mmStep == 0)
+			{
+				drawPlaneOrigin(oMan.getShader(1), glm::vec3(mp.x, mp.y, 1.5f), 5.0f, 5.0f, glm::vec3(0.0f, 0.0f, 1.0f), 0, false);
+				stepCounter = 0;
+			}
 		}
-		while (measMarkers.size() > 200)
+
+		/*while (measMarkers.size() > 200)
 		{
 			measMarkers.erase(measMarkers.begin());
-		}
+		}*/
 
 		for (glm::vec2 mp : globalDeltaSet)
 		{

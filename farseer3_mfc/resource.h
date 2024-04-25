@@ -1,6 +1,6 @@
 ﻿//{{NO_DEPENDENCIES}}
-// Включаемый файл, созданный в Microsoft Visual C++.
-// Используется farseer3mfc.rc
+// Microsoft Visual C++ generated include file.
+// Used by farseer3mfc.rc
 //
 #define IDM_ABOUTBOX                    0x0010
 #define IDD_ABOUTBOX                    100
@@ -25,6 +25,7 @@
 #define edBuffSize2                     1015
 #define edNSteps                        1015
 #define IDC_BUTTON9                     1016
+#define IDC_BUTTON10                    1017
 
 // Next default values for new objects
 // 

@@ -73,6 +73,7 @@ BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON8, &Cfarseer3mfcDlg::OnBnClickedButton8)
 	ON_EN_CHANGE(edBuffSize2, &Cfarseer3mfcDlg::OnEnChangeedbuffsize2)
 	ON_BN_CLICKED(IDC_BUTTON9, &Cfarseer3mfcDlg::OnBnClickedButton9)
+	ON_BN_CLICKED(IDC_BUTTON10, &Cfarseer3mfcDlg::OnBnClickedButton10)
 END_MESSAGE_MAP()
 
 
@@ -248,6 +249,15 @@ void Cfarseer3mfcDlg::outpMeasJourn()
 	vEdJournal.SetWindowText(txt);
 }
 
+void Cfarseer3mfcDlg::logStuff(CString txt)
+{
+	CString currText;
+	vEdJournal.GetWindowText(currText);
+	CString fullText;
+	fullText.Format(_T("%s\n%s"),currText,txt);
+	vEdJournal.SetWindowText(fullText);
+}
+
 void Cfarseer3mfcDlg::OnBnClickedButton7()
 {
 	appRef->demandOp = 4;
@@ -281,4 +291,22 @@ void Cfarseer3mfcDlg::OnBnClickedButton9()
 {
 	appRef->clearMeasJournal();
 	outpMeasJourn();
+}
+
+
+void Cfarseer3mfcDlg::OnBnClickedButton10()
+{
+	CString tol;
+	vEdTolerance.GetWindowText(tol);
+	appRef->expTolerance = _ttof(tol);
+
+	CString bufs;
+	vEdBuffSize.GetWindowText(bufs);
+	appRef->expBufSize = _ttoi(bufs);
+
+	vEdNSteps.GetWindowText(bufs);
+	appRef->expNSteps = _ttoi(bufs);
+
+	//new op for full image scan
+	appRef->demandOp = 6;
 }
