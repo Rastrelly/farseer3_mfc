@@ -52,4 +52,8 @@ public:
 	CEdit vEdNSteps;
 	afx_msg void OnBnClickedButton9();
 	afx_msg void OnBnClickedButton10();
+	CButton vCbUsePntMgr;
+	CButton vCbUseDblFltr;
+	CEdit vEdMTresh;
+	CEdit vEdFTresh;
 };

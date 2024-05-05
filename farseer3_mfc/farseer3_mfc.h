@@ -31,6 +31,7 @@ public:
 	float expTolerance;
 	int expBufSize;
 	int expNSteps;
+	float mTresh, fTresh;
 		
 	int demandOp;
 

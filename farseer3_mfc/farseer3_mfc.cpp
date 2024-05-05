@@ -5,6 +5,8 @@
 #include "farseer3_mfcDlg.h"
 #include <string>
 #include <fstream>
+#include <windows.h>
+#include <mmsystem.h>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/box.hpp>
@@ -57,6 +59,9 @@ int amBS = 20;
 int amNSteps = 20;
 rectangle resultingRect;
 bool useSecondaryFilter = true;
+bool usePointMerge = true;
+
+float mrgTresh = 0.05f, fltTresh = 0.25;
 
 vector<glm::vec2> measMarkers;
 vector<glm::vec2> polyPoints;
@@ -264,42 +269,50 @@ void autoWeighDeltas(vector<glm::vec2> &ds, vector<float> &dsc)
 float getAvgDistance(std::vector<glm::vec2> pts)
 {
 	int l = pts.size();
-	float avg = 0;
-	float sum = 0;
-	int n = 0;
-	for (int j = 0; j < l-1; j++)
+	if (l > 0)
 	{
-		for (int i = 0; i < l-1; i++)
+		float avg = 0;
+		float sum = 0;
+		int n = 0;
+		for (int j = 0; j < l - 1; j++)
 		{
-			if (i != j)
+			for (int i = 0; i < l - 1; i++)
 			{
-				float cDist = getDist(pts[j],pts[i]);
-				sum += cDist;
-				n++;
+				if (i != j)
+				{
+					float cDist = getDist(pts[j], pts[i]);
+					sum += cDist;
+					n++;
+				}
 			}
 		}
+		avg = sum / (float)n;
+		return avg;
 	}
-	avg = sum / (float)n;
-	return avg;
+	return 0;
 }
 
 float getAvgDistForPoint(std::vector<glm::vec2> pts, int pId)
 {	
 	int l = pts.size();
-	float avg = 0;
-	float sum = 0;
-	int n = 0;
-	for (int i = 0; i < l - 1; i++)
+	if ((l > 0) && (pId<l))
 	{
-		if (i != pId)
+		float avg = 0;
+		float sum = 0;
+		int n = 0;
+		for (int i = 0; i < l - 1; i++)
 		{
-			float cDist = getDist(pts[pId], pts[i]);
-			sum += cDist;			
-			n++;
+			if (i != pId)
+			{
+				float cDist = getDist(pts[pId], pts[i]);
+				sum += cDist;
+				n++;
+			}
 		}
-	}	
-	avg = sum / (float)n;
-	return avg;
+		avg = sum / (float)n;
+		return avg;
+	}
+	return 0;
 }
 
 
@@ -362,7 +375,68 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 		}
 	}
 
+
+	for (int i = 0; i < w; i++)//X run
+	{
+		measLogFile << "LINE " << i + 1 << "\n";
+		scanlineData.clear();
+		scanlineData.resize(h);
+		double accumDelta = 0;
+		for (int j = 0; j < h; j++) //X run
+		{
+			glm::vec3 cClr = getDataPixels(tex_data, texCh, i, j, w, h);
+			scanlineData[j] = colAvg(cClr);
+			if (j > 0)
+			{
+				double cDelta = scanlineData[j] - scanlineData[j - 1];
+				int deltaCount = 0;
+				//accumulate delta value if the function has the same sign
+				if (((cDelta > 0 && accumDelta >= 0) || (cDelta < 0 && accumDelta <= 0)) && (deltaCount < crawlerBuffer))
+				{
+					accumDelta += cDelta;
+					deltaCount++;
+				}
+				else
+				{
+					if (abs(accumDelta) > tolerance)
+					{
+						int XC = i - deltaCount / 2;
+						int YC = j;
+						pointCandidates.push_back({ XC, YC });
+						//
+						measLogFile << "XC = " << XC << "; YC = " << YC << "\n";
+					}
+					accumDelta = 0;
+					deltaCount = 0;
+				}
+			}
+		}
+	}
+
 	measLogFile << "Scan complete!\n";
+	if (usePointMerge)
+	{
+		float avgCDist = getAvgDistance(pointCandidates);
+
+		//merge close points
+		int ptl = pointCandidates.size();
+		for (int i = 0; i < ptl; i++)
+			for (int j = 0; j < ptl; j++)
+				if (i != j)
+				{
+					float dst = getDist(pointCandidates[i], pointCandidates[j]);
+					if (dst < mrgTresh*avgCDist)
+					{
+						glm::vec2 mPt(0.0f);
+						mPt.x = 0.5f*(pointCandidates[i].x + pointCandidates[j].x);
+						mPt.y = 0.5f*(pointCandidates[i].y + pointCandidates[j].y);
+						pointCandidates[i] = mPt;
+						pointCandidates.erase(pointCandidates.begin() + j);
+						ptl--;
+					}
+				}
+	}
+
 
 	//we now have a set of point candidates all across the image
 	//we need to filter them to get rid of fringe elements and errors
@@ -409,8 +483,8 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 	//are not too far and not too close from the average
 	measLogFile << "Filtered set \n";
 	std::vector<glm::vec2> pointCandsFiltered = {};
-	float searchTresholdLow =  0.25f; //an arbitrary search treshold
-	float searchTresholdHigh = 1.75f;
+	float searchTresholdLow = fltTresh; //an arbitrary search treshold
+	float searchTresholdHigh = 2 - fltTresh;
 	l = pointCandidates.size();
 	for (int i = 0; i < l; i++)
 	{
@@ -427,7 +501,7 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 	float avgDist = getAvgDistance(pointCandsFiltered);
 	measLogFile << "avgDist == " << avgDist << "\n";
 
-	if (useSecondaryFilter && avgDist!=0.0f)
+	if (useSecondaryFilter && (avgDist>0))
 	{
 		
 		float avgDistBot = 0.05;
@@ -441,7 +515,7 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 			measLogFile << "relAvgDist == " << relAvgDist << "\n";
 			if ((relAvgDist < avgDistBot) || (relAvgDist > avgDistTop))
 			{
-				pointCandsFiltered.erase(pointCandsFiltered.begin(), pointCandsFiltered.begin() + i);
+				pointCandsFiltered.erase(pointCandsFiltered.begin() + i);
 			}
 		}
 	}
@@ -450,6 +524,7 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 	for(glm::vec2 pt : pointCandsFiltered)
 	{
 		measMarkers.push_back({ pt.x,h - pt.y });
+		//globalDeltaSet.push_back({ pt.x,h - pt.y });
 		measLogFile << "XC = " << pt.x << "; YC = " << pt.y << "\n";
 	}
 
@@ -467,6 +542,7 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 
 	dlgRef->outpMeasJourn();
 	
+	PlaySound(L"SystemExclamation", NULL, SND_ASYNC);
 
 	measLogFile.close();
 }
@@ -792,7 +868,15 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 	if (op == 6)
 	{
 		dlgRef->logStuff(CString("Op 6 called"));
+
+		usePointMerge = dlgRef->vCbUsePntMgr.GetCheck();
+		useSecondaryFilter = dlgRef->vCbUseDblFltr.GetCheck();
+
 		theApp.demandOp = 0;
+		
+		mrgTresh = theApp.mTresh;
+		fltTresh = theApp.fTresh;
+
 		fullAutoMeasure(amTol,1.0,amBS);
 	}
 

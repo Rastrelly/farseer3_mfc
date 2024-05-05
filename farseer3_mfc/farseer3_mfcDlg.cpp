@@ -55,6 +55,10 @@ void Cfarseer3mfcDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, edTolerance, vEdTolerance);
 	DDX_Control(pDX, edBuffSize, vEdBuffSize);
 	DDX_Control(pDX, edNSteps, vEdNSteps);
+	DDX_Control(pDX, cbUsePntMgr, vCbUsePntMgr);
+	DDX_Control(pDX, cbUseDblFltr, vCbUseDblFltr);
+	DDX_Control(pDX, edMTresh, vEdMTresh);
+	DDX_Control(pDX, edFTresh, vEdFTresh);
 }
 
 BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)
@@ -105,6 +109,9 @@ BOOL Cfarseer3mfcDlg::OnInitDialog()
 	GetDlgItem(edScaleY)->SetWindowText(L"100");
 	GetDlgItem(edTolerance)->SetWindowText(L"0.6");
 	GetDlgItem(edBuffSize)->SetWindowText(L"20");
+	GetDlgItem(edNSteps)->SetWindowText(L"20");
+	GetDlgItem(edMTresh)->SetWindowText(L"0.05");
+	GetDlgItem(edFTresh)->SetWindowText(L"0.25");
 	GetDlgItem(edNSteps)->SetWindowText(L"20");
 
 	vCbShowMessage.SetWindowText(_T("Show message"));
@@ -306,6 +313,12 @@ void Cfarseer3mfcDlg::OnBnClickedButton10()
 
 	vEdNSteps.GetWindowText(bufs);
 	appRef->expNSteps = _ttoi(bufs);
+
+	vEdMTresh.GetWindowText(bufs);
+	appRef->mTresh = _ttof(bufs);
+
+	vEdFTresh.GetWindowText(bufs);
+	appRef->fTresh = _ttof(bufs);
 
 	//new op for full image scan
 	appRef->demandOp = 6;

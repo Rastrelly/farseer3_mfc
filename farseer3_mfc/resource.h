@@ -26,6 +26,11 @@
 #define edNSteps                        1015
 #define IDC_BUTTON9                     1016
 #define IDC_BUTTON10                    1017
+#define cbUsePntMgr                     1018
+#define cbUseDblFltr                    1019
+#define edMTresh                        1020
+#define edTolerance3                    1021
+#define edFTresh                        1021
 
 // Next default values for new objects
 // 
