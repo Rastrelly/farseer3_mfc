@@ -338,76 +338,73 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 	int h = texH;
 
 	//define first round of point candidates
-	for (int j = 0; j < h; j++)//Y run
+	for (int r = 0; r < 2; r++)
 	{
-		measLogFile << "LINE " << j+1 << "\n";
-		scanlineData.clear();
-		scanlineData.resize(w);
-		double accumDelta = 0;
-		for (int i = 0; i < w; i++) //X run
-		{			
-			glm::vec3 cClr = getDataPixels(tex_data, texCh, i, j, w, h);
-			scanlineData[i] = colAvg(cClr);
-			if (i > 0)
-			{
-				double cDelta = scanlineData[i] - scanlineData[i - 1];
-				int deltaCount=0;
-				//accumulate delta value if the function has the same sign
-				if (((cDelta > 0 && accumDelta >= 0) || (cDelta < 0 && accumDelta <= 0)) && (deltaCount < crawlerBuffer))
-				{
-					accumDelta += cDelta;
-					deltaCount++;
-				}
-				else
-				{
-					if (abs(accumDelta) > tolerance)
-					{
-						int XC = i - deltaCount / 2;
-						int YC = j;
-						pointCandidates.push_back({ XC, YC });
-						//globalDeltaSet.push_back({XC, h-YC});
-						measLogFile << "XC = " << XC << "; YC = " << YC << "\n";
-					}
-					accumDelta = 0;
-					deltaCount = 0;
-				}
-			}
-		}
-	}
-
-
-	for (int i = 0; i < w; i++)//X run
-	{
-		measLogFile << "LINE " << i + 1 << "\n";
-		scanlineData.clear();
-		scanlineData.resize(h);
-		double accumDelta = 0;
-		for (int j = 0; j < h; j++) //X run
+		measLogFile << "+++RUN  = " << r << "+++\n";
+		int mx1 = 0, mx2 = 0;
+		int xp, yp;
+		if (r == 0)
 		{
-			glm::vec3 cClr = getDataPixels(tex_data, texCh, i, j, w, h);
-			scanlineData[j] = colAvg(cClr);
-			if (j > 0)
+			mx1 = h;
+			mx2 = w;
+		}
+		if (r == 1)
+		{
+			mx1 = w;
+			mx2 = h;
+		}
+
+		for (int j = 0; j < mx1; j++)//Y run
+		{
+			measLogFile << "LINE " << j + 1 << "\n";
+			scanlineData.clear();
+			scanlineData.resize(mx2);
+			double accumDelta = 0; int deltaCount = 0;
+			for (int i = 0; i < mx2; i++) //X run
 			{
-				double cDelta = scanlineData[j] - scanlineData[j - 1];
-				int deltaCount = 0;
-				//accumulate delta value if the function has the same sign
-				if (((cDelta > 0 && accumDelta >= 0) || (cDelta < 0 && accumDelta <= 0)) && (deltaCount < crawlerBuffer))
+				if (r == 0)
 				{
-					accumDelta += cDelta;
-					deltaCount++;
+					xp = i; yp = j;
 				}
 				else
 				{
-					if (abs(accumDelta) > tolerance)
+					xp = j; yp = i;
+				}
+				glm::vec3 cClr = getDataPixels(tex_data, texCh, xp, yp, w, h);
+				scanlineData[i] = colAvg(cClr);
+				if (i > 0)
+				{					
+					double cDelta = scanlineData[i] - scanlineData[i - 1];					
+					//accumulate delta value if the function has the same sign
+					if ((cDelta > 0 && accumDelta >= 0) || (cDelta < 0 && accumDelta <= 0))
 					{
-						int XC = i - deltaCount / 2;
-						int YC = j;
-						pointCandidates.push_back({ XC, YC });
-						//
-						measLogFile << "XC = " << XC << "; YC = " << YC << "\n";
+						//accum deltas
+						accumDelta += cDelta;
+						deltaCount++;
+
+						//add point candidate if accum delta is nuff
+						if ((abs(accumDelta) > tolerance)&&(deltaCount > 1))
+						{
+							int XC = xp - deltaCount / 2;
+							int YC = yp;
+							pointCandidates.push_back({ XC, YC });
+							measLogFile << "XC = " << XC << "; YC = " << YC << "; AD = " << accumDelta << "; DC = " << deltaCount << "\n";
+							accumDelta = 0;
+						    deltaCount = 0;
+						}
+
+						//do purge if over buffer volume
+						if ((deltaCount >= crawlerBuffer))
+						{
+							accumDelta = 0;
+							deltaCount = 0;
+						}						
 					}
-					accumDelta = 0;
-					deltaCount = 0;
+					else
+					{
+						accumDelta = 0;
+						deltaCount = 0;
+					}
 				}
 			}
 		}
@@ -422,7 +419,7 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 		int ptl = pointCandidates.size();
 		for (int i = 0; i < ptl; i++)
 			for (int j = 0; j < ptl; j++)
-				if (i != j)
+				if ((i != j) && (i<ptl) && (j<ptl))
 				{
 					float dst = getDist(pointCandidates[i], pointCandidates[j]);
 					if (dst < mrgTresh*avgCDist)
