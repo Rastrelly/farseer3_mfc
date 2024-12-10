@@ -13,6 +13,8 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
+#include <boost/math/interpolators/cardinal_cubic_b_spline.hpp>
+
 #include "MinimumAreaBox2.h"
 
 #ifdef _DEBUG
@@ -60,6 +62,7 @@ int amNSteps = 20;
 rectangle resultingRect;
 bool useSecondaryFilter = true;
 bool usePointMerge = true;
+bool useOldMethod = false; //this is to not use spline when analyzing
 
 float mrgTresh = 0.05f, fltTresh = 0.25;
 
@@ -316,7 +319,7 @@ float getAvgDistForPoint(std::vector<glm::vec2> pts, int pId)
 }
 
 
-void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
+void fullAutoMeasureOld(float tolerance, float density, int crawlerBuffer)
 {
 
 	//file output T__T
@@ -542,6 +545,191 @@ void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
 	PlaySound(L"SystemExclamation", NULL, SND_ASYNC);
 
 	measLogFile.close();
+}
+
+bool bendPoint(double a, double b, double c)
+{
+	//if difference on both sides is equal then it is not a bend point
+	if (((a - b) < 0) && ((c - b) < 0)) return false;
+	if (((a - b) > 0) && ((c - b) > 0)) return false;
+	if (((a - b) == 0) && ((c - b) == 0)) return false;
+	//otherwise it is
+	return true;
+}
+
+int getSideId(int id, int buffer, int max, bool doLeft)
+{
+	int k = 1;
+	if (doLeft) k = -1;
+
+	int stp = (k * buffer) / 2;
+	int checkVal = id + stp;
+
+	if (checkVal < 0) checkVal = 0;
+	if (checkVal > max) checkVal = max;
+
+	return checkVal;
+}
+
+
+void fullAutoMeasure(float tolerance, float density, int crawlerBuffer)
+{
+	
+	//file output T__T
+	std::ofstream measLogFile("mLog.txt");
+	
+	//do this if using old approach
+	if (useOldMethod)
+	{
+		fullAutoMeasureOld(tolerance, density, crawlerBuffer);
+		return;
+	}
+	//do this for scanline approach based off spline
+
+	measMarkers.clear();
+	globalDeltaSet.clear();
+
+	//log
+	dlgRef->logStuff(CString("Starting automeasure"));
+
+	//record here a set of point coords to measure
+	std::vector<glm::vec2> pointCandidates = {};
+	//record here the current scanline for the picture
+	std::vector<double> scanlineData = {};
+
+	int w = texW;
+	int h = texH;
+
+	for (int r = 0; r < 2; r++)
+	{
+		measLogFile << "+++RUN  = " << r << "+++\n";
+		int mx1 = 0, mx2 = 0;
+		int xp, yp;
+
+		if (r == 0)
+		{
+			mx1 = h;
+			mx2 = w;
+		}
+		if (r == 1)
+		{
+			mx1 = w;
+			mx2 = h;
+		}
+
+		for (int j = 0; j < mx1; j++)//Y run
+		{
+
+			measLogFile << "+ Scanline " << j << " +\n";
+
+			//dlgRef->logStuff(CString("Iterating: j = ") + CString(std::to_string(j).c_str()));
+
+			scanlineData.clear();
+			scanlineData.resize(mx2);
+			//accumulate scanline data
+			for (int i = 0; i < mx2; i++) //X run
+			{
+				if (r == 0)
+				{
+					xp = i; yp = j;
+				}
+				else
+				{
+					xp = j; yp = i;
+				}
+				glm::vec3 cClr = getDataPixels(tex_data, texCh, xp, yp, w, h);
+				float cClrAvg = colAvg(cClr);
+				measLogFile << cClrAvg << ";";
+				scanlineData[i] = cClrAvg;
+			}
+			measLogFile << "\n";
+			//at this point we have a complete scanline
+			//now we run it through spline interpolation
+			double spl_t0 = 0;
+			double spl_h = 1;
+			boost::math::interpolators::cardinal_cubic_b_spline<double> spline(scanlineData.begin(), scanlineData.end(), spl_t0, spl_h);
+			
+			double currDerivative = spline.prime(0);
+			double prevDerivative = spline.prime(0);
+			double nextDerivative = spline.prime(0);
+
+			//find abs peaks for first derivatives of the spline
+			measLogFile << "Gathering derivatives data: \n";
+			for (int ri = 1; ri < mx2-1; ri++)
+			{
+
+				int an_x, an_y;
+
+				if (r == 0)
+				{
+					an_x = ri; an_y = j;
+				}
+				else
+				{
+					an_x = j; an_y = ri;
+				}
+
+				//dlgRef->logStuff(CString("Iterating: xp = ") + CString(std::to_string(an_x).c_str())+
+				//	CString("; yp = ") + CString(std::to_string(an_y).c_str()));
+
+				//find previous, current and next first derivatives of the spline
+				prevDerivative = abs(spline.prime(ri-1));
+				currDerivative = abs(spline.prime(ri));
+				nextDerivative = abs(spline.prime(ri+1));
+
+				measLogFile << currDerivative << ";";
+
+				//if it is a bend point, add a point candidate
+				//AND if difference at bend point is high enough (defined by crawled buffer)
+				//and tolerance
+				if (bendPoint(prevDerivative, currDerivative, nextDerivative))
+				{
+					//dlgRef->logStuff(CString("Bend point at ")+CString(std::to_string(ri).c_str())+ CString("\n"));
+
+					if (
+						  abs(scanlineData[getSideId(ri, crawlerBuffer, mx2 - 1, true)] - scanlineData[getSideId(ri, crawlerBuffer, mx2 - 1, false)]) > tolerance
+					   )
+					pointCandidates.push_back({an_x, an_y});
+				}
+
+			}
+			
+			measLogFile << "\n";
+
+			measLogFile << "Gathering spline data: \n";
+			for (int ri = 0; ri < mx2; ri++)
+			{
+				double currSpline = abs(spline(ri));
+				measLogFile << currSpline << ";";
+			}
+			measLogFile << "\n";
+
+		}
+	}
+
+	for (glm::vec2 pt : pointCandidates)
+	{
+		measMarkers.push_back({ pt.x,h - pt.y });
+		//globalDeltaSet.push_back({ pt.x,h - pt.y });
+	}
+
+	processPointSet(measMarkers);
+
+	resultingRect = getBoundingBox();
+
+	//scale values
+
+	resultingRect.extentScaled.x = resultingRect.extent.x * scaleX;
+	resultingRect.extentScaled.y = resultingRect.extent.y * scaleY;
+
+	measJournal.push_back(resultingRect.extentScaled.x * 2);
+	measJournal.push_back(resultingRect.extentScaled.y * 2);
+
+	dlgRef->outpMeasJourn();
+
+	measLogFile.close();
+
+	PlaySound(L"SystemExclamation", NULL, SND_ASYNC);
 }
 
 
@@ -868,6 +1056,7 @@ void processStage(int &op, int &stage, glm::vec2 &pt1, glm::vec2 &pt2, float cx,
 
 		usePointMerge = dlgRef->vCbUsePntMgr.GetCheck();
 		useSecondaryFilter = dlgRef->vCbUseDblFltr.GetCheck();
+		useOldMethod = !(dlgRef->vCbUseNewAlgo.GetCheck());
 
 		theApp.demandOp = 0;
 		

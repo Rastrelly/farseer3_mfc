@@ -59,6 +59,7 @@ void Cfarseer3mfcDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, cbUseDblFltr, vCbUseDblFltr);
 	DDX_Control(pDX, edMTresh, vEdMTresh);
 	DDX_Control(pDX, edFTresh, vEdFTresh);
+	DDX_Control(pDX, cbUseNewAlgo, vCbUseNewAlgo);
 }
 
 BEGIN_MESSAGE_MAP(Cfarseer3mfcDlg, CDialogEx)

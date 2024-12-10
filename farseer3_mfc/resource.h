@@ -30,7 +30,9 @@
 #define cbUseDblFltr                    1019
 #define edMTresh                        1020
 #define edTolerance3                    1021
-#define edFTresh                        1021
+#define cbUseDblFltr2                   1021
+#define edFTresh                        1022
+#define cbUseNewAlgo                    1023
 
 // Next default values for new objects
 // 

@@ -56,4 +56,5 @@ public:
 	CButton vCbUseDblFltr;
 	CEdit vEdMTresh;
 	CEdit vEdFTresh;
+	CButton vCbUseNewAlgo;
 };
