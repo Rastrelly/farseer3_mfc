@@ -23,20 +23,20 @@
     <ProjectGuid>{0D92CE7E-93B9-499D-8740-3E4725967E89}</ProjectGuid>
     <Keyword>MFCProj</Keyword>
     <RootNamespace>farseer3mfc</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
@@ -44,14 +44,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
@@ -76,8 +76,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\CPPLIBS\GTE;C:\CPPLIBS\boost_1_77_0;C:\CPPLIBS\freetype-windows-binaries-2.13.0\include;C:\CPPLIBS\glfw32\include;C:\CPPLIBS\stb_image;C:\CPPLIBS\glm;C:\CPPLIBS\glad\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\CPPLIBS\glfw32\lib-vc2017;C:\CPPLIBS\freetype-windows-binaries-2.13.0\release static\vs2015-2022\win32;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\CPPLIBS\GTE;D:\CPPLIBS\boost_1_77_0;D:\CPPLIBS\freetype-windows-binaries-2.13.0\include;D:\CPPLIBS\glfw32\include;D:\CPPLIBS\stb_image;D:\CPPLIBS\glm;D:\CPPLIBS\glad\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\CPPLIBS\glfw32\lib-vc2017;D:\CPPLIBS\freetype-windows-binaries-2.13.0\release static\vs2015-2022\win32;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
